@@ -1,9 +1,9 @@
 /**
   ******************************************************************************
-  * @file    stm32f2xx_hal_def.h
+  * @file    stm32f4xx_hal_def.h
   * @author  MCD Application Team
-  * @version V1.1.3
-  * @date    29-June-2016
+  * @version V1.6.0
+  * @date    04-November-2016
   * @brief   This file contains HAL common defines, enumeration, macros and 
   *          structures definitions. 
   ******************************************************************************
@@ -37,15 +37,15 @@
   */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __STM32F2xx_HAL_DEF
-#define __STM32F2xx_HAL_DEF
+#ifndef __STM32F4xx_HAL_DEF
+#define __STM32F4xx_HAL_DEF
 
 #ifdef __cplusplus
  extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32f2xx.h"
+#include "stm32f4xx.h"
 //#include "Legacy/stm32_hal_legacy.h"
 //#include <stdio.h>
 
@@ -77,14 +77,14 @@ typedef enum
 #define HAL_IS_BIT_SET(REG, BIT)         (((REG) & (BIT)) != RESET)
 #define HAL_IS_BIT_CLR(REG, BIT)         (((REG) & (BIT)) == RESET)
 
-#define __HAL_LINKDMA(__HANDLE__, __PPP_DMA_FIELD_, __DMA_HANDLE_)               \
+#define __HAL_LINKDMA(__HANDLE__, __PPP_DMA_FIELD__, __DMA_HANDLE__)               \
                         do{                                                      \
-                              (__HANDLE__)->__PPP_DMA_FIELD_ = &(__DMA_HANDLE_); \
-                              (__DMA_HANDLE_).Parent = (__HANDLE__);             \
+                              (__HANDLE__)->__PPP_DMA_FIELD__ = &(__DMA_HANDLE__); \
+                              (__DMA_HANDLE__).Parent = (__HANDLE__);             \
                           } while(0)
 
 #define UNUSED(x) ((void)(x))
-							  
+
 /** @brief Reset the Handle's State field.
   * @param __HANDLE__: specifies the Peripheral Handle.
   * @note  This macro can be used for the following purpose: 
@@ -104,7 +104,7 @@ typedef enum
 
 #if (USE_RTOS == 1)
   /* Reserved for future use */
-  #error " USE_RTOS should be 0 in the current HAL release "
+  #error "USE_RTOS should be 0 in the current HAL release"
 #else
   #define __HAL_LOCK(__HANDLE__)                                           \
                                 do{                                        \
@@ -133,7 +133,7 @@ typedef enum
   #endif /* __packed */
 #endif /* __GNUC__ */
 
-  
+
 /* Macro to get variable aligned on 4-bytes, for __ICCARM__ the directive "#pragma data_alignment=4" must be used instead */
 #if defined   (__GNUC__)        /* GNU Compiler */
   #ifndef __ALIGN_END
@@ -154,6 +154,39 @@ typedef enum
     #endif /* __CC_ARM */
   #endif /* __ALIGN_BEGIN */
 #endif /* __GNUC__ */
+
+
+/** 
+  * @brief  __RAM_FUNC definition
+  */ 
+#if defined ( __CC_ARM   )
+/* ARM Compiler
+   ------------
+   RAM functions are defined using the toolchain options. 
+   Functions that are executed in RAM should reside in a separate source module.
+   Using the 'Options for File' dialog you can simply change the 'Code / Const' 
+   area of a module to a memory space in physical RAM.
+   Available memory areas are declared in the 'Target' tab of the 'Options for Target'
+   dialog. 
+*/
+#define __RAM_FUNC HAL_StatusTypeDef 
+
+#elif defined ( __ICCARM__ )
+/* ICCARM Compiler
+   ---------------
+   RAM functions are defined using a specific toolchain keyword "__ramfunc". 
+*/
+#define __RAM_FUNC __ramfunc HAL_StatusTypeDef
+
+#elif defined   (  __GNUC__  )
+/* GNU Compiler
+   ------------
+  RAM functions are defined using a specific toolchain attribute 
+   "__attribute__((section(".RamFunc")))".
+*/
+#define __RAM_FUNC HAL_StatusTypeDef  __attribute__((section(".RamFunc")))
+
+#endif
 
 /** 
   * @brief  __NOINLINE definition
@@ -176,6 +209,6 @@ typedef enum
 }
 #endif
 
-#endif /* ___STM32F2xx_HAL_DEF */
+#endif /* ___STM32F4xx_HAL_DEF */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

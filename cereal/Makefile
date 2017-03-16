@@ -1,4 +1,4 @@
 -include build_from_src.mk
 
 release:
-	@echo "sensord: this is a release"
+	@echo "cereal: this is a release"
