@@ -1,5 +1,5 @@
 #include <string.h>
-#include "monitoring.h"
+#include "dmonitoring.h"
 #include "common/mat.h"
 #include "common/timing.h"
 
@@ -10,11 +10,11 @@
 #define MODEL_HEIGHT 320
 #define FULL_W 426
 
-void monitoring_init(MonitoringState* s) {
-  s->m = new DefaultRunModel("../../models/monitoring_model_q.dlc", (float*)&s->output, OUTPUT_SIZE, USE_DSP_RUNTIME);
+void dmonitoring_init(DMonitoringModelState* s) {
+  s->m = new DefaultRunModel("../../models/dmonitoring_model_q.dlc", (float*)&s->output, OUTPUT_SIZE, USE_DSP_RUNTIME);
 }
 
-MonitoringResult monitoring_eval_frame(MonitoringState* s, void* stream_buf, int width, int height) {
+DMonitoringResult dmonitoring_eval_frame(DMonitoringModelState* s, void* stream_buf, int width, int height) {
 
   uint8_t *raw_buf = (uint8_t*) stream_buf;
   uint8_t *raw_y_buf = raw_buf;
@@ -111,30 +111,41 @@ MonitoringResult monitoring_eval_frame(MonitoringState* s, void* stream_buf, int
   s->m->execute(net_input_buf);
   delete[] net_input_buf;
 
-  MonitoringResult ret = {0};
+  DMonitoringResult ret = {0};
   memcpy(&ret.face_orientation, &s->output[0], sizeof ret.face_orientation);
+  memcpy(&ret.face_orientation_meta, &s->output[6], sizeof ret.face_orientation_meta);
   memcpy(&ret.face_position, &s->output[3], sizeof ret.face_position);
+  memcpy(&ret.face_position_meta, &s->output[9], sizeof ret.face_position_meta);
   memcpy(&ret.face_prob, &s->output[12], sizeof ret.face_prob);
   memcpy(&ret.left_eye_prob, &s->output[21], sizeof ret.left_eye_prob);
   memcpy(&ret.right_eye_prob, &s->output[30], sizeof ret.right_eye_prob);
   memcpy(&ret.left_blink_prob, &s->output[31], sizeof ret.right_eye_prob);
   memcpy(&ret.right_blink_prob, &s->output[32], sizeof ret.right_eye_prob);
+  ret.face_orientation_meta[0] = softplus(ret.face_orientation_meta[0]);
+  ret.face_orientation_meta[1] = softplus(ret.face_orientation_meta[1]);
+  ret.face_orientation_meta[2] = softplus(ret.face_orientation_meta[2]);
+  ret.face_position_meta[0] = softplus(ret.face_position_meta[0]);
+  ret.face_position_meta[1] = softplus(ret.face_position_meta[1]);
   return ret;
 }
 
-void monitoring_publish(PubSocket* sock, uint32_t frame_id, const MonitoringResult res) {
+void dmonitoring_publish(PubSocket* sock, uint32_t frame_id, const DMonitoringResult res) {
   // make msg
   capnp::MallocMessageBuilder msg;
   cereal::Event::Builder event = msg.initRoot<cereal::Event>();
   event.setLogMonoTime(nanos_since_boot());
 
-  auto framed = event.initDriverMonitoring();
+  auto framed = event.initDriverState();
   framed.setFrameId(frame_id);
 
   kj::ArrayPtr<const float> face_orientation(&res.face_orientation[0], ARRAYSIZE(res.face_orientation));
+  kj::ArrayPtr<const float> face_orientation_std(&res.face_orientation_meta[0], ARRAYSIZE(res.face_orientation_meta));
   kj::ArrayPtr<const float> face_position(&res.face_position[0], ARRAYSIZE(res.face_position));
+  kj::ArrayPtr<const float> face_position_std(&res.face_position_meta[0], ARRAYSIZE(res.face_position_meta));
   framed.setFaceOrientation(face_orientation);
+  framed.setFaceOrientationStd(face_orientation_std);
   framed.setFacePosition(face_position);
+  framed.setFacePositionStd(face_position_std);
   framed.setFaceProb(res.face_prob);
   framed.setLeftEyeProb(res.left_eye_prob);
   framed.setRightEyeProb(res.right_eye_prob);
@@ -147,6 +158,6 @@ void monitoring_publish(PubSocket* sock, uint32_t frame_id, const MonitoringResu
   sock->send((char*)bytes.begin(), bytes.size());
 }
 
-void monitoring_free(MonitoringState* s) {
+void dmonitoring_free(DMonitoringModelState* s) {
   delete s->m;
 }
