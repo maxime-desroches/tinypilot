@@ -5,13 +5,17 @@ import math
 import atexit
 import numpy as np
 import threading
-import carla
 import random
 import cereal.messaging as messaging
+import argparse
 from common.params import Params
 from common.realtime import Ratekeeper
-from can import can_function, sendcan_function
+from lib.can import can_function, sendcan_function
 import queue
+
+parser = argparse.ArgumentParser(description='Bridge between CARLA and openpilot.')
+parser.add_argument('--autopilot', action='store_true')
+args = parser.parse_args()
 
 pm = messaging.PubMaster(['frame', 'sensorEvents', 'can'])
 
@@ -62,15 +66,16 @@ def health_function():
     rk.keep_time()
 
 def fake_driver_monitoring():
-  pm = messaging.PubMaster(['driverMonitoring'])
+  pm = messaging.PubMaster(['driverState'])
   while 1:
     dat = messaging.new_message()
-    dat.init('driverMonitoring')
-    dat.driverMonitoring.faceProb = 1.0
-    pm.send('driverMonitoring', dat)
+    dat.init('driverState')
+    dat.driverState.faceProb = 1.0
+    pm.send('driverState', dat)
     time.sleep(0.1)
 
 def go():
+  import carla
   client = carla.Client("127.0.0.1", 2000)
   client.set_timeout(5.0)
   world = client.load_world('Town03')
@@ -99,7 +104,9 @@ def go():
 
   vehicle_bp = random.choice(blueprint_library.filter('vehicle.bmw.*'))
   vehicle = world.spawn_actor(vehicle_bp, random.choice(world_map.get_spawn_points()))
-  #vehicle.set_autopilot(True)
+
+  if args.autopilot:
+    vehicle.set_autopilot(True)
 
   blueprint = blueprint_library.find('sensor.camera.rgb')
   blueprint.set_attribute('image_size_x', str(W))
@@ -122,9 +129,6 @@ def go():
     vehicle.destroy()
     print("done")
   atexit.register(destroy)
-
-  threading.Thread(target=health_function).start()
-  threading.Thread(target=fake_driver_monitoring).start()
 
   # can loop
   sendcan = messaging.sub_sock('sendcan')
@@ -150,6 +154,18 @@ if __name__ == "__main__":
   from selfdrive.version import terms_version, training_version
   params.put("HasAcceptedTerms", terms_version)
   params.put("CompletedTrainingVersion", training_version)
+  params.put("CommunityFeaturesToggle", "1")
 
+  threading.Thread(target=health_function).start()
+  threading.Thread(target=fake_driver_monitoring).start()
+
+  # no carla, still run
+  try:
+    import carla
+  except ImportError:
+    print("WARNING: NO CARLA")
+    while 1:
+      time.sleep(1)
+    
   go()
 
