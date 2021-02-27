@@ -103,6 +103,7 @@ pyserial = "*"
 onnx = "*"
 onnxruntime = "*"
 timezonefinder = "*"
+sentry-sdk = "*"
 
 [requires]
 python_version = "3.8"
