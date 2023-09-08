@@ -156,6 +156,10 @@ class CarState(CarStateBase):
     # save the entire LKAS11 and CLU11
     self.lkas11 = copy.copy(cp_cam.vl["LKAS11"])
     self.clu11 = copy.copy(cp.vl["CLU11"])
+    # only forward FCA messages for FCW/AEB when using openpilot longitudinal on Camera SCC cars
+    if self.CP.openpilotLongitudinalControl and self.CP.carFingerprint in CAMERA_SCC_CAR:
+      self.fca11 = copy.copy(cp_cruise.vl["FCA11"])
+      self.fca12 = copy.copy(cp_cruise.vl["FCA12"])
     self.steer_state = cp.vl["MDPS12"]["CF_Mdps_ToiActive"]  # 0 NOT ACTIVE, 1 ACTIVE
     self.prev_cruise_buttons = self.cruise_buttons[-1]
     self.cruise_buttons.extend(cp.vl_all["CLU11"]["CF_Clu_CruiseSwState"])
@@ -296,14 +300,21 @@ class CarState(CarStateBase):
       ("LKAS11", 100)
     ]
 
-    if not CP.openpilotLongitudinalControl and CP.carFingerprint in CAMERA_SCC_CAR:
-      messages += [
-        ("SCC11", 50),
-        ("SCC12", 50),
-      ]
+    if CP.carFingerprint in CAMERA_SCC_CAR:
+      if CP.openpilotLongitudinalControl:
+        if CP.flags & HyundaiFlags.USE_FCA.value:
+          messages += [
+            ("FCA11", 50),
+            ("FCA12", 50),
+          ]
+      else:
+        messages += [
+          ("SCC11", 50),
+          ("SCC12", 50),
+        ]
 
-      if CP.flags & HyundaiFlags.USE_FCA.value:
-        messages.append(("FCA11", 50))
+        if CP.flags & HyundaiFlags.USE_FCA.value:
+          messages.append(("FCA11", 50))
 
     return CANParser(DBC[CP.carFingerprint]["pt"], messages, 2)
 
