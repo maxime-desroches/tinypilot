@@ -9,6 +9,9 @@ class RadarInterface(RadarInterfaceBase):
   def __init__(self, CP):
     super().__init__(CP)
     self.CP = CP
+    if CP.carFingerprint in [CAR.TESLA_AP3_MODEL3, CAR.TESLA_AP3_MODELY]:
+      self.rcp = None
+      return
 
     if CP.carFingerprint == CAR.TESLA_MODELS_RAVEN:
       messages = [('RadarStatus', 16)]
