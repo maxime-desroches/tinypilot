@@ -15,7 +15,7 @@ EventName = car.CarEvent.EventName
 #  We recommend that you do not change these numbers from the defaults.
 # ******************************************************************************************
 
-class DRIVER_MONITOR_SETTINGS():
+class DRIVER_MONITOR_SETTINGS:
   def __init__(self):
     self._DT_DMON = DT_DMON
     # ref (page15-16): https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:42018X1947&rid=2
@@ -92,7 +92,7 @@ def face_orientation_from_net(angles_desc, pos_desc, rpy_calib):
   yaw -= rpy_calib[2]
   return roll_net, pitch, yaw
 
-class DriverPose():
+class DriverPose:
   def __init__(self, max_trackable):
     self.yaw = 0.
     self.pitch = 0.
@@ -101,12 +101,12 @@ class DriverPose():
     self.yaw_offseter = RunningStatFilter(max_trackable=_POSE_OFFSET_MAX_COUNT)
     self.cfactor = 1.
 
-class DriverBlink():
+class DriverBlink:
   def __init__(self):
     self.left_blink = 0.
     self.right_blink = 0.
 
-class DriverStatus():
+class DriverStatus:
   def __init__(self, rhd_saved=False, settings=None, always_on=False):
     if settings is None:
       settings = DRIVER_MONITOR_SETTINGS()
