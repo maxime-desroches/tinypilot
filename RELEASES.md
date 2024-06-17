@@ -1,6 +1,8 @@
 Version 0.9.8 (2024-XX-XX)
 ========================
 * Added toggle to enable driver monitoring even when openpilot is not engaged
+* Hyundai Palisade (without HDA II) 2023-24 support thanks to sunnyhaibin!
+* Kia Telluride (without HDA II) 2023-24 support thanks to sunnyhaibin!
 
 Version 0.9.7 (2024-06-13)
 ========================
@@ -50,9 +52,11 @@ Version 0.9.5 (2023-11-17)
 * Hyundai Custin 2023 support thanks to sunnyhaibin and Saber422!
 * Hyundai Ioniq 6 2023 support thanks to sunnyhaibin and alamo3!
 * Hyundai Kona Electric 2023 (Korean version) support thanks to sunnyhaibin and haram-KONA!
+* Hyundai Palisade (without HDA II) 2023 support thanks to sunnyhaibin!
 * Kia K8 Hybrid (with HDA II) 2023 support thanks to sunnyhaibin!
 * Kia Optima Hybrid 2019 support
 * Kia Sorento Hybrid 2023 support thanks to sunnyhaibin!
+* Kia Telluride (without HDA II) 2023 support thanks to sunnyhaibin!
 * Lexus GS F 2016 support thanks to snyperifle!
 * Lexus IS 2023 support thanks to L3R5!
 

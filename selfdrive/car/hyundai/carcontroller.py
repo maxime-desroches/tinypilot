@@ -6,7 +6,7 @@ from opendbc.can.packer import CANPacker
 from openpilot.selfdrive.car import apply_driver_steer_torque_limits, common_fault_avoidance
 from openpilot.selfdrive.car.hyundai import hyundaicanfd, hyundaican
 from openpilot.selfdrive.car.hyundai.hyundaicanfd import CanBus
-from openpilot.selfdrive.car.hyundai.values import HyundaiFlags, Buttons, CarControllerParams, CANFD_CAR, CAR
+from openpilot.selfdrive.car.hyundai.values import HyundaiFlags, Buttons, CarControllerParams, CANFD_CAR, CAR, CAN_CANFD_HYBRID_CAR
 from openpilot.selfdrive.car.interfaces import CarControllerBase
 
 VisualAlert = car.CarControl.HUDControl.VisualAlert
@@ -103,9 +103,11 @@ class CarController(CarControllerBase):
       if self.CP.flags & HyundaiFlags.ENABLE_BLINKERS:
         can_sends.append([0x7b1, 0, b"\x02\x3E\x80\x00\x00\x00\x00\x00", self.CAN.ECAN])
 
+    hda2 = self.CP.flags & HyundaiFlags.CANFD_HDA2
+    hda2_can_canfd_hybrid = hda2 and self.CP.flags & HyundaiFlags.CAN_CANFD_HYBRID
+
     # CAN-FD platforms
-    if self.CP.carFingerprint in CANFD_CAR:
-      hda2 = self.CP.flags & HyundaiFlags.CANFD_HDA2
+    if self.CP.carFingerprint in CANFD_CAR and (self.CP.carFingerprint not in CAN_CANFD_HYBRID_CAR or hda2_can_canfd_hybrid):
       hda2_long = hda2 and self.CP.openpilotLongitudinalControl
 
       # steering control
@@ -153,7 +155,7 @@ class CarController(CarControllerBase):
 
       # 20 Hz LFA MFA message
       if self.frame % 5 == 0 and self.CP.flags & HyundaiFlags.SEND_LFA.value:
-        can_sends.append(hyundaican.create_lfahda_mfc(self.packer, CC.enabled))
+        can_sends.append(hyundaican.create_lfahda_mfc(self.packer, self.frame, CC.enabled, self.CP))
 
       # 5 Hz ACC options
       if self.frame % 20 == 0 and self.CP.openpilotLongitudinalControl:

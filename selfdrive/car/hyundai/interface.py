@@ -3,7 +3,7 @@ from panda import Panda
 from openpilot.selfdrive.car.hyundai.hyundaicanfd import CanBus
 from openpilot.selfdrive.car.hyundai.values import HyundaiFlags, CAR, DBC, CANFD_CAR, CAMERA_SCC_CAR, CANFD_RADAR_SCC_CAR, \
                                          CANFD_UNSUPPORTED_LONGITUDINAL_CAR, EV_CAR, HYBRID_CAR, LEGACY_SAFETY_MODE_CAR, \
-                                         UNSUPPORTED_LONGITUDINAL_CAR, Buttons
+                                         UNSUPPORTED_LONGITUDINAL_CAR, Buttons, CAN_CANFD_HYBRID_CAR
 from openpilot.selfdrive.car.hyundai.radar_interface import RADAR_START_ADDR
 from openpilot.selfdrive.car import create_button_events, get_safety_config
 from openpilot.selfdrive.car.interfaces import CarInterfaceBase
@@ -56,6 +56,12 @@ class CarInterface(CarInterfaceBase):
             ret.flags |= HyundaiFlags.CANFD_ALT_GEARS.value
         if candidate not in CANFD_RADAR_SCC_CAR:
           ret.flags |= HyundaiFlags.CANFD_CAMERA_SCC.value
+      # detect cars with hybrid definitions of CAN and CAN-FD
+      if candidate in CAN_CANFD_HYBRID_CAR:
+        ret.flags |= HyundaiFlags.CAN_CANFD_HYBRID.value
+        # Send LFA message on cars with HDA
+        if 0x485 in fingerprint[CAN.CAM]:
+          ret.flags |= HyundaiFlags.SEND_LFA.value
     else:
       # TODO: detect EV and hybrid
       if candidate in HYBRID_CAR:
@@ -80,7 +86,7 @@ class CarInterface(CarInterfaceBase):
 
     # *** longitudinal control ***
     if candidate in CANFD_CAR:
-      ret.experimentalLongitudinalAvailable = candidate not in (CANFD_UNSUPPORTED_LONGITUDINAL_CAR | CANFD_RADAR_SCC_CAR)
+      ret.experimentalLongitudinalAvailable = candidate not in (CANFD_UNSUPPORTED_LONGITUDINAL_CAR | CANFD_RADAR_SCC_CAR | CAN_CANFD_HYBRID_CAR)
     else:
       ret.experimentalLongitudinalAvailable = candidate not in (UNSUPPORTED_LONGITUDINAL_CAR | CAMERA_SCC_CAR)
     ret.openpilotLongitudinalControl = experimental_long and ret.experimentalLongitudinalAvailable
@@ -93,14 +99,16 @@ class CarInterface(CarInterfaceBase):
     ret.longitudinalActuatorDelay = 0.5
 
     # *** feature detection ***
-    if candidate in CANFD_CAR:
+    if candidate in (CANFD_CAR - CAN_CANFD_HYBRID_CAR):
       ret.enableBsm = 0x1e5 in fingerprint[CAN.ECAN]
     else:
-      ret.enableBsm = 0x58b in fingerprint[0]
+      bus = CAN.ECAN if ret.flags & HyundaiFlags.CAN_CANFD_HYBRID else 0
+      ret.enableBsm = 0x58b in fingerprint[bus]
 
     # *** panda safety config ***
     if candidate in CANFD_CAR:
-      cfgs = [get_safety_config(car.CarParams.SafetyModel.hyundaiCanfd), ]
+      cfgs = [get_safety_config(car.CarParams.SafetyModel.hyundai), ] if ret.flags & HyundaiFlags.CAN_CANFD_HYBRID else \
+             [get_safety_config(car.CarParams.SafetyModel.hyundaiCanfd), ]
       if CAN.ECAN >= 4:
         cfgs.insert(0, get_safety_config(car.CarParams.SafetyModel.noOutput))
       ret.safetyConfigs = cfgs
@@ -113,6 +121,8 @@ class CarInterface(CarInterfaceBase):
         ret.safetyConfigs[-1].safetyParam |= Panda.FLAG_HYUNDAI_CANFD_ALT_BUTTONS
       if ret.flags & HyundaiFlags.CANFD_CAMERA_SCC:
         ret.safetyConfigs[-1].safetyParam |= Panda.FLAG_HYUNDAI_CAMERA_SCC
+      if ret.flags & HyundaiFlags.CAN_CANFD_HYBRID:
+        ret.safetyConfigs[-1].safetyParam |= Panda.FLAG_HYUNDAI_CAN_CANFD
     else:
       if candidate in LEGACY_SAFETY_MODE_CAR:
         # these cars require a special panda safety mode due to missing counters and checksums in the messages

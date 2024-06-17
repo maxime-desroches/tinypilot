@@ -1,4 +1,5 @@
 import crcmod
+from openpilot.selfdrive.car.hyundai.hyundaicanfd import CanBus
 from openpilot.selfdrive.car.hyundai.values import CAR, HyundaiFlags
 
 hyundai_checksum = crcmod.mkCrcFun(0x11D, initCrc=0xFD, rev=False, xorOut=0xdf)
@@ -7,31 +8,48 @@ def create_lkas11(packer, frame, CP, apply_steer, steer_req,
                   torque_fault, lkas11, sys_warning, sys_state, enabled,
                   left_lane, right_lane,
                   left_lane_depart, right_lane_depart):
-  values = {s: lkas11[s] for s in [
+  can_canfd_hybrid = CP.flags & HyundaiFlags.CAN_CANFD_HYBRID
+  bus = CanBus(CP).ECAN if can_canfd_hybrid else 0
+
+  lkas11_sigs = [
     "CF_Lkas_LdwsActivemode",
-    "CF_Lkas_LdwsSysState",
-    "CF_Lkas_SysWarning",
     "CF_Lkas_LdwsLHWarning",
     "CF_Lkas_LdwsRHWarning",
-    "CF_Lkas_HbaLamp",
-    "CF_Lkas_FcwBasReq",
-    "CF_Lkas_HbaSysState",
-    "CF_Lkas_FcwOpt",
-    "CF_Lkas_HbaOpt",
-    "CF_Lkas_FcwSysState",
-    "CF_Lkas_FcwCollisionWarning",
-    "CF_Lkas_FusionState",
     "CF_Lkas_FcwOpt_USM",
-    "CF_Lkas_LdwsOpt_USM",
-  ]}
-  values["CF_Lkas_LdwsSysState"] = sys_state
-  values["CF_Lkas_SysWarning"] = 3 if sys_warning else 0
+  ]
+
+  if not can_canfd_hybrid:
+    lkas11_sigs += [
+      "CF_Lkas_LdwsSysState",
+      "CF_Lkas_SysWarning",
+      "CF_Lkas_HbaLamp",
+      "CF_Lkas_FcwBasReq",
+      "CF_Lkas_HbaSysState",
+      "CF_Lkas_FcwOpt",
+      "CF_Lkas_HbaOpt",
+      "CF_Lkas_FcwSysState",
+      "CF_Lkas_FcwCollisionWarning",
+      "CF_Lkas_FusionState",
+      "CF_Lkas_LdwsOpt_USM",
+    ]
+
+  values = {s: lkas11[s] for s in lkas11_sigs}
+
   values["CF_Lkas_LdwsLHWarning"] = left_lane_depart
   values["CF_Lkas_LdwsRHWarning"] = right_lane_depart
   values["CR_Lkas_StrToqReq"] = apply_steer
   values["CF_Lkas_ActToi"] = steer_req
   values["CF_Lkas_ToiFlt"] = torque_fault  # seems to allow actuation on CR_Lkas_StrToqReq
-  values["CF_Lkas_MsgCount"] = frame % 0x10
+  values["CF_Lkas_MsgCount"] = frame % (0xF if can_canfd_hybrid else 0x10)
+
+  if can_canfd_hybrid:
+    values["CF_Lkas_LdwsActivemode"] = int(left_lane) + (int(right_lane) << 1)
+    values["CF_Lkas_FcwOpt_USM"] = 2 if enabled else 1
+    values["NEW_SIGNAL_1"] = 0
+    values["NEW_SIGNAL_5"] = 100
+  else:
+    values["CF_Lkas_LdwsSysState"] = sys_state
+    values["CF_Lkas_SysWarning"] = 3 if sys_warning else 0
 
   if CP.carFingerprint in (CAR.HYUNDAI_SONATA, CAR.HYUNDAI_PALISADE, CAR.KIA_NIRO_EV, CAR.KIA_NIRO_HEV_2021, CAR.HYUNDAI_SANTA_FE,
                            CAR.HYUNDAI_IONIQ_EV_2020, CAR.HYUNDAI_IONIQ_PHEV, CAR.KIA_SELTOS, CAR.HYUNDAI_ELANTRA_2021, CAR.GENESIS_G70_2020,
@@ -77,11 +95,11 @@ def create_lkas11(packer, frame, CP, apply_steer, steer_req,
     # Genesis and Optima fault when forwarding while engaged
     values["CF_Lkas_LdwsActivemode"] = 2
 
-  dat = packer.make_can_msg("LKAS11", 0, values)[2]
+  dat = packer.make_can_msg("LKAS11", bus, values)[2]
 
   if CP.flags & HyundaiFlags.CHECKSUM_CRC8:
     # CRC Checksum as seen on 2019 Hyundai Santa Fe
-    dat = dat[:6] + dat[7:8]
+    dat = dat[1:8] if can_canfd_hybrid else dat[:6] + dat[7:8]
     checksum = hyundai_checksum(dat)
   elif CP.flags & HyundaiFlags.CHECKSUM_6B:
     # Checksum of first 6 Bytes, as seen on 2018 Kia Sorento
@@ -92,7 +110,7 @@ def create_lkas11(packer, frame, CP, apply_steer, steer_req,
 
   values["CF_Lkas_Chksum"] = checksum
 
-  return packer.make_can_msg("LKAS11", 0, values)
+  return packer.make_can_msg("LKAS11", bus, values)
 
 
 def create_clu11(packer, frame, clu11, button, CP):
@@ -113,18 +131,30 @@ def create_clu11(packer, frame, clu11, button, CP):
   values["CF_Clu_CruiseSwState"] = button
   values["CF_Clu_AliveCnt1"] = frame % 0x10
   # send buttons to camera on camera-scc based cars
-  bus = 2 if CP.flags & HyundaiFlags.CAMERA_SCC else 0
+  bus = 2 if CP.flags & HyundaiFlags.CAMERA_SCC else CanBus(CP).ECAN if CP.flags & HyundaiFlags.CAN_CANFD_HYBRID else 0
   return packer.make_can_msg("CLU11", bus, values)
 
 
-def create_lfahda_mfc(packer, enabled, hda_set_speed=0):
+def create_lfahda_mfc(packer, frame, enabled, CP):
+  can_canfd_hybrid = CP.flags & HyundaiFlags.CAN_CANFD_HYBRID
+  bus = CanBus(CP).ECAN if can_canfd_hybrid else 0
+
   values = {
     "LFA_Icon_State": 2 if enabled else 0,
-    "HDA_Active": 1 if hda_set_speed else 0,
-    "HDA_Icon_State": 2 if hda_set_speed else 0,
-    "HDA_VSetReq": hda_set_speed,
+    "HDA_Icon_State": 2 if enabled else 0,
   }
-  return packer.make_can_msg("LFAHDA_MFC", 0, values)
+
+  if can_canfd_hybrid:
+    values["COUNTER"] = frame % 0xF
+
+    dat = packer.make_can_msg("LFAHDA_MFC", bus, values)[2]
+
+    # CRC Checksum
+    checksum = hyundai_checksum(dat[1:8])
+
+    values["CHECKSUM"] = checksum
+
+  return packer.make_can_msg("LFAHDA_MFC", bus, values)
 
 def create_acc_commands(packer, enabled, accel, upper_jerk, idx, hud_control, set_speed, stopping, long_override, use_fca):
   commands = []
