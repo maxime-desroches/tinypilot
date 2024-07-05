@@ -1,12 +1,3 @@
-This is the source for a new https://docs.comma.ai. It's not hosted anywhere yet, but it's easy to run locally.
-
-https://www.mkdocs.org/getting-started/
-
-```
-pip install mkdocs mkdocs-terminal
-mkdocs serve
-```
-
-inspiration:
-* https://rerun.io/docs/
-* https://docs.expo.dev/
+version https://git-lfs.github.com/spec/v1
+oid sha256:73a95d75ee4fc261f421cfb7fed8d619b512fba73a85ca38ccc9fd8834f2b54f
+size 274

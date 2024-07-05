@@ -1,13 +1,3 @@
-snapdragon profiler
---------
-
-
-* download from https://developer.qualcomm.com/software/snapdragon-profiler/tools-archive (need a qc developer account)
-  * choose v2021.5 (verified working with 24.04 dev environment)
-* unzip to selfdrive/debug/profiling/snapdragon/SnapdragonProfiler
-* run ```./setup-profiler.sh```
-* run ```./setup-agnos.sh```
-* run ```selfdrive/debug/adb.sh``` on device
-* run the ```adb connect xxx``` command that was given to you on local pc
-* cd to SnapdragonProfiler and run ```./run_sdp.sh```
-* connect to device -> choose device you just setup
+version https://git-lfs.github.com/spec/v1
+oid sha256:57c5de9ed3f7b16783e554efc5c39c7e7bbe24d3703e8f8ae69620d8d81b4f55
+size 569

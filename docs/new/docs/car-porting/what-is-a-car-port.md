@@ -1,9 +1,3 @@
-# What is a car port?
-
-All car ports live in `openpilot/selfdrive/car/`.
-
-* interface.py: Interface for the car, defines the CarInterface class
-* carstate.py: Reads CAN from car and builds openpilot CarState message
-* carcontroller.py: Builds CAN messages to send to car
-* values.py: Limits for actuation, general constants for cars, and supported car documentation
-* radar_interface.py: Interface for parsing radar points from the car
+version https://git-lfs.github.com/spec/v1
+oid sha256:e85ba71000e7989d0f737c07b362c569a986f73b887f6aeb3496adb83a2d40f1
+size 436

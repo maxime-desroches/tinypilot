@@ -1,15 +1,3 @@
----
-name: Car port
-about: For new car ports
-title: ''
-labels: 'car port'
-assignees: ''
----
-
-**Checklist**
-
-- [ ] added entry to CAR in selfdrive/car/*/values.py and ran `selfdrive/car/docs.py` to generate new docs
-- [ ] test route added to [routes.py](https://github.com/commaai/openpilot/blob/master/selfdrive/car/tests/routes.py)
-- [ ] route with openpilot:
-- [ ] route with stock system:
-- [ ] car harness used (if comma doesn't sell it, put N/A):
+version https://git-lfs.github.com/spec/v1
+oid sha256:9b7f05bc4393872a8daea9ed31a701dd8c05a3539a310a681350837c0a51bded
+size 451

@@ -1,21 +1,3 @@
-# comma serial
-
-The comma serial gets you access to a low level serial console on your comma three, while providing a stable 12V to power the device.
-
-The serial is available on the [comma shop](https://comma.ai/shop/products/comma-serial).
-
-## setup
-
-* Connect all three cables to the serial
-* Connect the USB A to your computer
-* Connect the USB-C to the OBD-C port on your comma three
-
-## usage
-
-```
-sudo screen /dev/ttyUSB0 115200
-```
-or use `connect.sh` to run the previous command in a loop.
-
-
-The username and password are both `comma`.
+version https://git-lfs.github.com/spec/v1
+oid sha256:c318719e3302f0017aca4b2e0949f65890252e068ae3bec4b09562918b836dc5
+size 544
